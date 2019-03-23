@@ -1,0 +1,86 @@
+spring:
+  application:
+    name: order
+#  datasource:
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#    username: root
+#    password: root
+#    url: jdbc:mysql://localhost:3306/cloud1?serverTimezone=GMT%2B8&characterEncoding=utf-8&useSSL=false
+#  jpa:
+#    show-sql: true
+#eureka:
+#  client:
+#    service-url:
+#      defaultZone: http://localhost:8761/eureka/
+#server:
+#  port: 8081
+#logging:
+#  level:
+#    root: info
+#    com.cloud: debug
+#  file: logs/${spring.application.name}.log
+
+#负载均衡的策略 默认轮询 对RestTemplate的 如果是Feign还是默认轮询
+#PRODUCT:
+#  ribbon:
+#    NFLoadBalancerRuleClassName: com.netflix.loadbalancer.RandomRule
+######
+#ribbon:
+#  eureka:
+#    enabled: true
+
+#配置中心的方式(拉取 服务配置 注意 应用的name必须写在当前配置文件中) 如果config服务启动多个端口 那么order应用 拉取配置是实现了负载均衡的（随机）
+
+  cloud:
+    config:
+      discovery:
+        enabled: true
+        service-id: CONFIG
+      profile: test
+      label: release
+#      把一个服务划分为一个组里面，不管启动多少个实例，只有一个实例消费这个消息 避免启动多个order后，发送多个消息后 多个order都消费消息
+    stream:
+      bindings:
+        myMessageInput:
+          group: order
+          content-type: application/json
+  #配置zipkin
+  zipkin:
+    base-url: http://localhost:9411/
+  #设置外界可观察的 一个百分比 默认0.1 开发环境下设置为1
+  sleuth:
+    sampler:
+      probability: 1.0
+    web:
+      client:
+        enabled: true
+#写在 配置中的写法 注意别忘了@HystrixCommand加在方法上
+#hystrix:
+#  command:
+#    getProductInfoList:
+#      execution:
+#        isolation:
+#          thread:
+#            timeoutInMilliseconds: 3000
+#    default:
+#      execution:
+#        isolation:
+#          thread:
+#            timeoutInMilliseconds: 1000
+
+#之前用RestTemplate调用的  这回用feign
+feign:
+  hystrix:
+    enabled: true
+
+#为了使用hystrix界面 注意： springboot 2.x 需要做如下
+management:
+  endpoints:
+    web:
+      exposure:
+        #include: hystrix.stream
+        include: "*"
+#更改指定包的日志级别 此处为了看spring-cloud-starter-sleuth组件的日志（追踪）
+logging:
+  level:
+    org.springframework.cloud.openfeign: debug
